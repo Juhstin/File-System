@@ -30,18 +30,20 @@ def init():
     for i in range(0,4):
         if i == 0:
             OFT.append({
-                "RW": 512,
+                "RW": [],
                 "POSITION": 0,
                 "FSIZE": 0,
                 "FDINDEX": 0
             })
         else:
             OFT.append({
-                "RW": 512,
+                "RW": [],
                 "POSITION": -1,
                 "FSIZE": -1,
                 "FDINDEX": -1
             })
+
+    OFT[0]["RW"] = D[7]
 
     print("System Initialized")
 
@@ -124,16 +126,32 @@ def delete(name):
 
 def open(name):
 
-    fdBlock, fdIndex = findName(name)
+    fdBlock, fdIndex,dir,i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
         print("Error: file does not exist")
         return
 
-    for i in range(0,4):
-        if OFT[i]["FDINDEX"] == -1:
-            OFT[i]["RW"] = 512
-            OFT[i][""]
+    for OFTIndex in range(0,4):
+        if OFT[OFTIndex]["FDINDEX"] == -1:
+            OFT[OFTIndex]["RW"] = []
+            OFT[OFTIndex]["POSITION"] = 0
+            OFT[OFTIndex]["FSIZE"] = D[fdBlock][fdIndex]
+            OFT[OFTIndex]["FDINDEX"] = fdIndex
+
+            if OFT[OFTIndex]["FSIZE"] == 0:
+                block = getNewBlock()
+                if block != -1:
+                    D[fdBlock][fdIndex+1] = block
+                    D[0][block] = 1
+                    OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex + 1]]
+            else:
+                OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex+1]]
+
+            print("Success: file name opened at index", OFTIndex)
             return
+
+    print("Error: too many files open")
+
 def close(name):
     pass
 
@@ -202,6 +220,8 @@ if __name__ == "__main__":
     init()
     create("Tes")
     create("Te")
+    open("Tes")
+    printOFT()
     printD()
 
 
