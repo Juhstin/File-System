@@ -30,17 +30,17 @@ def init():
     for i in range(0,4):
         if i == 0:
             OFT.append({
-                "RW": "1",
-                "POSITION": -1,
-                "FSIZE": -1,
-                "FDINDEX": -1
-            })
-        else:
-            OFT.append({
-                "RW": "1",
+                "RW": 512,
                 "POSITION": 0,
                 "FSIZE": 0,
                 "FDINDEX": 0
+            })
+        else:
+            OFT.append({
+                "RW": 512,
+                "POSITION": -1,
+                "FSIZE": -1,
+                "FDINDEX": -1
             })
 
     print("System Initialized")
@@ -90,7 +90,7 @@ def create(name):
                 nameList = list(name)
                 for j in range(0, 4 - len(nameList)): # Append end of string char if name is < 4 chars
                     nameList.append('/')
-                nameList.append(fdIndex)
+                nameList.append(fdIndex + ((fdBlock-1)*512))
                 for j in range(0,3):
                     nameList.append('')
 
@@ -102,20 +102,56 @@ def create(name):
     print("Success: file",name, "created")
 
 def delete(name):
+    nameList = list(name)
+    for j in range(0, 4 - len(nameList)):  # Append end of string char if name is < 4 chars
+        nameList.append('/')
+
+    # fdBlock, fdIndex,dir, i = findName(name)
+    # if fdBlock == -1 and fdIndex == -1:
+    #     print("Error: file does not exist")
+    #     return
+
+    dirList = getBlocks(1,0)
+    for dir in dirList:
+        for i in range(0, 505, 8):
+            nameField = D[dir][i:i+4]
+            if nameList == nameField:
+                fdIndex = D[dir][i+4]
+                fdBlock = (fdIndex//512)+1
+                D[fdBlock][fdIndex] = -1 # Mark descriptor i as free by setting the size field to −1
+            
+                blockList = getBlocks(fdBlock,fdIndex)
+                if blockList: # If there are blocks allocated
+                    for block in blockList: # For each nonzero block number in the descriptor, update bitmap to reflect the freed block
+                        D[0][block] = 0
+                    for block in range(fdIndex+1,fdIndex+4): # Set all nonzero block numbers to 0
+                        D[fdBlock][block] = ''
+
+                for space in range(i,i+8): # Mark the directory entry as free by setting the name field to '0'
+                    D[dir][space] = '0'
+
+                print("Success: file",name,"destroyed")
+                return
+
+    print("error: file does not exist")
+
+def open(name):
+
+    fdBlock, fdIndex = findName(name)
+    if fdBlock == -1 and fdIndex == -1:
+        print("Error: file does not exist")
+        return
+
+    for i in range(0,4):
+        if OFT[i]["FDINDEX"] == -1:
+            OFT[i]["RW"] = 512
+            OFT[i][""]
+            return
+def close(name):
     pass
 
 def seek(i,p):
     pass
-
-def open(name):
-    pass
-    #
-    # if len(freeBlockList) == 0:
-    #     D[fdBlock][fdIndex].append(freeBlockIndex)
-    #     freeBlockIndex += 1
-    # else:
-    #     D[fdBlock][fdIndex].append(freeBlockList[0])
-    #     freeBlockList.pop(0);
 
 # HELPER FUNCTIONS
 def findFreeFD():
@@ -147,15 +183,39 @@ def assignNewBlock(fdBlock,fdIndex,newBIndex):
             return True;
     return False;
 
+def getBlocks(fdBlock,fdIndex):
+    blockList = list((x for x in D[fdBlock][fdIndex+1:fdIndex+4] if type(x) == int))
+    return blockList
+
+def printD():
+    for i,row in enumerate(D,0):
+        print("D[" + str(i) + "]:",row)
+
+def printOFT():
+    for i in OFT:
+        print(i)
+
+def findName(name):
+    nameList = list(name)
+    for j in range(0, 4 - len(nameList)):  # Append end of string char if name is < 4 chars
+        nameList.append('/')
+
+    dirList = getBlocks(1, 0)
+    for dir in dirList:
+        for i in range(0, 505, 8):
+            nameField = D[dir][i:i + 4]
+            if nameList == nameField:
+                fdIndex = D[dir][i + 4]
+                fdBlock = (fdIndex // 512) + 1
+                return fdBlock,fdIndex,dir,i
+    return -1, -1, -1, -1
 
 
 if __name__ == "__main__":
     init()
     create("Tes")
     create("Te")
-
-    for i,row in enumerate(D,0):
-        print("D[" + str(i) + "]:",row)
+    printD()
 
 
 
