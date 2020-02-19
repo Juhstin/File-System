@@ -102,38 +102,25 @@ def create(name):
     print("Success: file",name, "created")
 
 def delete(name):
-    nameList = list(name)
-    for j in range(0, 4 - len(nameList)):  # Append end of string char if name is < 4 chars
-        nameList.append('/')
 
-    # fdBlock, fdIndex,dir, i = findName(name)
-    # if fdBlock == -1 and fdIndex == -1:
-    #     print("Error: file does not exist")
-    #     return
+    fdBlock, fdIndex,dir, i = findName(name)
+    if fdBlock == -1 and fdIndex == -1:
+        print("Error: file does not exist")
+        return
 
-    dirList = getBlocks(1,0)
-    for dir in dirList:
-        for i in range(0, 505, 8):
-            nameField = D[dir][i:i+4]
-            if nameList == nameField:
-                fdIndex = D[dir][i+4]
-                fdBlock = (fdIndex//512)+1
-                D[fdBlock][fdIndex] = -1 # Mark descriptor i as free by setting the size field to −1
-            
-                blockList = getBlocks(fdBlock,fdIndex)
-                if blockList: # If there are blocks allocated
-                    for block in blockList: # For each nonzero block number in the descriptor, update bitmap to reflect the freed block
-                        D[0][block] = 0
-                    for block in range(fdIndex+1,fdIndex+4): # Set all nonzero block numbers to 0
-                        D[fdBlock][block] = ''
+    D[fdBlock][fdIndex] = -1 # Mark descriptor i as free by setting the size field to −1
 
-                for space in range(i,i+8): # Mark the directory entry as free by setting the name field to '0'
-                    D[dir][space] = '0'
+    blockList = getBlocks(fdBlock,fdIndex)
+    if blockList: # If there are blocks allocated
+        for block in blockList: # For each nonzero block number in the descriptor, update bitmap to reflect the freed block
+            D[0][block] = 0
+        for block in range(fdIndex+1,fdIndex+4): # Set all nonzero block numbers to 0
+            D[fdBlock][block] = ''
 
-                print("Success: file",name,"destroyed")
-                return
+    for space in range(i,i+8): # Mark the directory entry as free by setting the name field to '0'
+        D[dir][space] = '0'
 
-    print("error: file does not exist")
+    print("Success: file",name,"destroyed")
 
 def open(name):
 
