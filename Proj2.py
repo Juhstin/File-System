@@ -3,12 +3,15 @@ import sys, os
 D = []
 OFT = []
 M = []
-
+I = []
+O = []
 
 def init():
     D.clear()
     OFT.clear()
     M.clear()
+    I.clear()
+    O.clear()
 
     for i in range(64): # D[64][512]
         D.append([''] * 512)
@@ -235,9 +238,21 @@ def write(i,m,n):
     print("Success:",n,"bytes written")
 
 def seek(i,p):
+    if p > OFT[i]["FSIZE"]:
+        print("Error: current position is past the end of file")
+        return
 
-    pass
+    blocketh = p//512
+    if blocketh != OFT[i]["POSITION"]//512:
+        fdBlock = (OFT[i]["FDINDEX"]//508) + 1
+        fdIndex = OFT[i]["FDINDEX"] % 512
+        D[D[fdBlock][fdIndex + 1 + OFT[i]["POSITION"]//512]] = OFT[i]["RW"]
+        OFT[i]["RW"] = D[D[fdBlock][fdIndex + 1 + blocketh]]
 
+    OFT[i]["POSITION"] = p
+    print("Success: current position is",p)
+
+    
 # HELPER FUNCTIONS
 def findFreeFD():
     for i in range(1,7):
@@ -304,6 +319,7 @@ if __name__ == "__main__":
     read(0,0,3)
     print("M:",M)
     write(1,0,3)
+    seek(1, 2)
     printOFT()
     printD()
 
