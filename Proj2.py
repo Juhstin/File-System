@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 D = []
 OFT = []
@@ -109,6 +109,7 @@ def delete(name):
     if fdBlock == -1 and fdIndex == -1:
         print("Error: file does not exist")
         return
+    fdIndex = fdIndex%512
 
     D[fdBlock][fdIndex] = -1 # Mark descriptor i as free by setting the size field to −1
 
@@ -135,25 +136,44 @@ def open(name):
         if OFT[OFTIndex]["FDINDEX"] == -1:
             OFT[OFTIndex]["RW"] = []
             OFT[OFTIndex]["POSITION"] = 0
-            OFT[OFTIndex]["FSIZE"] = D[fdBlock][fdIndex]
-            OFT[OFTIndex]["FDINDEX"] = fdIndex
+            OFT[OFTIndex]["FSIZE"] = D[fdBlock][fdIndex%512]
+            OFT[OFTIndex]["FDINDEX"] = fdIndex # Setting true fdIndex (Can be > 508)
 
             if OFT[OFTIndex]["FSIZE"] == 0:
                 block = getNewBlock()
                 if block != -1:
-                    D[fdBlock][fdIndex+1] = block
+                    D[fdBlock][fdIndex%512+1] = block
                     D[0][block] = 1
-                    OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex + 1]]
+                    OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex%512 + 1]]
             else:
-                OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex+1]]
+                OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex%512+1]]
 
             print("Success: file name opened at index", OFTIndex)
             return
 
     print("Error: too many files open")
 
-def close(name):
-    pass
+def close(i):
+
+    for OFTIndex in range(0,4):
+        if OFT[OFTIndex]["FDINDEX"] == i:
+
+            fdBlock = (i//512)+1
+
+            # Determine which block is currently held in the r/w buffer and copy the current buffer contents to the block
+            #Block is known based on position, position%512
+            D[D[fdBlock][(i%512)+(OFT[OFTIndex]["POSITION"]//512)+1]] = OFT[OFTIndex]["RW"] #Not really needed
+
+            D[fdBlock][i%512] = OFT[OFTIndex]["FSIZE"] # Copy the file size from the OFT to the descriptor
+
+            OFT[OFTIndex]["RW"] = [] #2 lines above is needed if this is here
+            OFT[OFTIndex]["FDINDEX"] = -1 #Mark the OFT entry as free
+            OFT[OFTIndex]["POSITION"] = -1
+            OFT[OFTIndex]["FSIZE"] = -1
+
+            print("success: file", i ,"closed")
+            return
+
 
 def seek(i,p):
     pass
@@ -212,7 +232,7 @@ def findName(name):
             if nameList == nameField:
                 fdIndex = D[dir][i + 4]
                 fdBlock = (fdIndex // 512) + 1
-                return fdBlock,fdIndex,dir,i
+                return fdBlock,fdIndex,dir,i # Returns true fdIndex (Can be > than 508)
     return -1, -1, -1, -1
 
 
@@ -221,8 +241,8 @@ if __name__ == "__main__":
     create("Tes")
     create("Te")
     open("Tes")
+    close(4)
     printOFT()
     printD()
-
 
 
