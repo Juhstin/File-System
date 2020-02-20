@@ -182,22 +182,60 @@ def close(i):
             return
 
 def read(i,m,n):
-    RWPosition = OFT[i]["FSIZE"]%512
+    RWPosition = OFT[i]["POSITION"]%512
     pos = RWPosition
-    end = RWPosition + n
 
-    while pos < 512 and pos < end: # Until is reached
+    for c in range(0,n): # Until is reached
         if pos == 512 or pos == 1024:
             fdBlock = (OFT[i]["FINDEX"] // 512) + 1
             OFT[i]["RW"] = D[D[fdBlock][(OFT[i]["FINDEX"] % 512) + (OFT[i]["POSITION"] // 512) + 2]]
-            end -= pos
             pos = 0
         M[m] = OFT[i]["RW"][pos]
         m += 1
         pos += 1
+    OFT[i]["POSITION"] += n
     print("Success:",n,"bytes read")
 
+def write(i,m,n):
+    #The function write(i, m, n) copies n bytes from memory M starting at location m to the open file i, starting at the current position.
+    RWPosition = OFT[i]["POSITION"]%512
+    pos = RWPosition
+    blocketh = RWPosition//512
+
+    for c in range(0,n):
+        if pos == 512 or pos == 1024: # End of buffer
+            blockList = getBlocks((OFT[i]["FDINDEX"]//508)+1,OFT[i]["FDINDEX"]%512)
+            if len(blockList) > blocketh+1: # A sequential block exists
+                # Write OFT[i]["RW"] to blocketh and get blocketh+1
+                D[blockList[blocketh]] = OFT[i]["RW"]
+                OFT[i]["RW"] = D[blockList[blocketh+1]]
+                pos = 0
+                blocketh += 1
+            elif len(blockList) < 3 and blocketh+1 == len(blockList): # allocate another free block
+                block = getNewBlock()
+                if block != -1:
+                    D[0][block] = 1
+                    D[(OFT[i]["FDINDEX"]//508)+1][OFT[i]["FDINDEX"]%512 + 1 + blocketh + 1] = block
+                    OFT[i]["RW"] = D[block]
+                    pos = 0
+                    blocketh += 1
+                # Else break
+            #Else break
+
+        OFT[i]["RW"][pos] = M[m]
+        m += 1
+        pos += 1
+
+    OFT[i]["POSITION"] += n
+    if(OFT[i]["POSITION"] > OFT[i]["FSIZE"]):
+        OFT[i]["FSIZE"] = OFT[i]["POSITION"]
+        D[(OFT[i]["FDINDEX"]//508)+1][OFT[i]["FDINDEX"]%512] = OFT[i]["FSIZE"]
+
+    # If c == n print n, else print n - c
+    print("Success:",n,"bytes written")
+
 def seek(i,p):
+
     pass
 
 # HELPER FUNCTIONS
@@ -263,11 +301,12 @@ if __name__ == "__main__":
     create("Tes")
     create("Te")
     open("Tes")
-    close(4)
-    printOFT()
-    printD()
     read(0,0,3)
     print("M:",M)
+    write(1,0,3)
+    printOFT()
+    printD()
+
 
 
 
