@@ -2,11 +2,13 @@ import sys, os
 
 D = []
 OFT = []
+M = []
 
 
 def init():
     D.clear()
     OFT.clear()
+    M.clear()
 
     for i in range(64): # D[64][512]
         D.append([''] * 512)
@@ -44,6 +46,9 @@ def init():
             })
 
     OFT[0]["RW"] = D[7]
+
+    for i in range(0,512):
+        M.append('')
 
     print("System Initialized")
 
@@ -155,6 +160,8 @@ def open(name):
 
 def close(i):
 
+    i *= 4
+
     for OFTIndex in range(0,4):
         if OFT[OFTIndex]["FDINDEX"] == i:
 
@@ -174,6 +181,21 @@ def close(i):
             print("success: file", i ,"closed")
             return
 
+def read(i,m,n):
+    RWPosition = OFT[i]["FSIZE"]%512
+    pos = RWPosition
+    end = RWPosition + n
+
+    while pos < 512 and pos < end: # Until is reached
+        if pos == 512 or pos == 1024:
+            fdBlock = (OFT[i]["FINDEX"] // 512) + 1
+            OFT[i]["RW"] = D[D[fdBlock][(OFT[i]["FINDEX"] % 512) + (OFT[i]["POSITION"] // 512) + 2]]
+            end -= pos
+            pos = 0
+        M[m] = OFT[i]["RW"][pos]
+        m += 1
+        pos += 1
+    print("Success:",n,"bytes read")
 
 def seek(i,p):
     pass
@@ -244,5 +266,8 @@ if __name__ == "__main__":
     close(4)
     printOFT()
     printD()
+    read(0,0,3)
+    print("M:",M)
+
 
 
