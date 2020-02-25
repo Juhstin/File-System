@@ -117,7 +117,7 @@ def create(name):
 
     D[1][0] += 8 # fd[0] (directory file) size is now 8 more bytes
     fdCount += 1
-    print("Success: file",name, "created")
+    print(name, "created")
 
 def delete(name):
     global fdCount
@@ -141,9 +141,9 @@ def delete(name):
         D[dir][space] = '0'
 
     fdCount -= 1
-    print("Success: file",name,"destroyed")
+    print(name,"destroyed")
 
-def open(name):
+def myOpen(name):
 
     fdBlock, fdIndex,dir,i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
@@ -166,13 +166,12 @@ def open(name):
             else:
                 OFT[OFTIndex]["RW"] = D[D[fdBlock][fdIndex%512+1]]
 
-            print("Success: file name opened at index", OFTIndex)
+            print(name,"opened",OFTIndex)
             return
 
     print("Error: too many files open")
 
-def close(i):
-
+def myClose(i):
     i *= 4
 
     for OFTIndex in range(0,4):
@@ -191,7 +190,7 @@ def close(i):
             OFT[OFTIndex]["POSITION"] = -1
             OFT[OFTIndex]["FSIZE"] = -1
 
-            print("success: file", i ,"closed")
+            print(i//4 ,"closed")
             return
 
 def read(i,m,n):
@@ -207,7 +206,7 @@ def read(i,m,n):
         m += 1
         pos += 1
     OFT[i]["POSITION"] += n
-    print("Success:",n,"bytes read")
+    print(n,"bytes read from",i)
 
 def write(i,m,n):
     #The function write(i, m, n) copies n bytes from memory M starting at location m to the open file i, starting at the current position.
@@ -245,7 +244,7 @@ def write(i,m,n):
         D[(OFT[i]["FDINDEX"]//508)+1][OFT[i]["FDINDEX"]%512] = OFT[i]["FSIZE"]
 
     # If c == n print n, else print n - c
-    print("Success:",n,"bytes written")
+    print(n,"bytes written to",i)
 
 def seek(i,p):
     if p > OFT[i]["FSIZE"]:
@@ -260,7 +259,7 @@ def seek(i,p):
         OFT[i]["RW"] = D[D[fdBlock][fdIndex + 1 + blocketh]]
 
     OFT[i]["POSITION"] = p
-    print("Success: current position is",p)
+    print("position is",p)
 
 def directory():
     dirList = list((x for x in D[1][1:4] if type(x) == int))
@@ -278,7 +277,7 @@ def directory():
                 fdBlock = fdIndex // 508 + 1
                 fsize = D[fdBlock][fdIndex%512]
 
-                print(name,fsize)
+                print(name,fsize,end=' ')
 
 def read_memory(m,n):
     mList = M[m:m+n]
@@ -292,9 +291,10 @@ def read_memory(m,n):
 
 def write_memory(m,s):
     i = 0
-    for ch in s:
+    for ch in list(s):
         M[m+i] = ch
         i+=1
+    print(i,"bytes written to M")
 
 # HELPER FUNCTIONS
 def findFreeFD():
@@ -355,21 +355,40 @@ def findName(name):
 
 
 if __name__ == "__main__":
-    init()
-    create("Tes")
-    create("Te")
-    open("Tes")
-    read(0,0,3)
-    print("M:",M)
-    write(1,0,3)
-    printOFT()
-    printD()
-    directory()
-    read_memory(0,10)
-    write_memory(4,"Hello")
-    read_memory(0,10)
-    write(1,0,10)
-    printD()
 
+    with open('/Users/JustinFu/Documents/CompSci 143B/Proj2/input.txt') as fp:
+        line = fp.readline()
+        while(line):
+            cmd = list(line.split())
+            line = fp.readline()
 
+            if cmd:
+                if cmd[0] == "in":
+                    init()
+                elif cmd[0] == "cr":
+                    create(cmd[1])
+                elif cmd[0] == "de":
+                    delete(cmd[1])
+                elif cmd[0] == "op":
+                    myOpen(cmd[1])
+                elif cmd[0] == "cl":
+                    if cmd[1].isdigit() == False:
+                        print("Error")
+                        continue
+                    myClose(int(cmd[1]))
+                elif cmd[0] == "rd":
+                    read(int(cmd[1]),int(cmd[2]),int(cmd[3]))
+                elif cmd[0] == "wr":
+                    write(int(cmd[1]),int(cmd[2]),int(cmd[3]))
+                elif cmd[0] == "sk":
+                    seek(int(cmd[1]),int(cmd[2]))
+                elif cmd[0] == "dr":
+                    directory()
+                    print()
+                elif cmd[0] == "rm":
+                    read_memory(int(cmd[1]),int(cmd[2]))
+                elif cmd[0] == "wm":
+                    write_memory(int(cmd[1]),cmd[2])
+            else:
+                print()
 
