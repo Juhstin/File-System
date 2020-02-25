@@ -5,13 +5,16 @@ OFT = []
 M = []
 I = []
 O = []
+fdCount = 0;
 
 def init():
+    global fdCount
     D.clear()
     OFT.clear()
     M.clear()
     I.clear()
     O.clear()
+    fdCount = 0;
 
     for i in range(64): # D[64][512]
         D.append([''] * 512)
@@ -56,7 +59,7 @@ def init():
     print("System Initialized")
 
 def create(name):
-    global freeBlockIndex
+    global fdCount
 
     if len(name) > 3:
         print("Error")
@@ -65,6 +68,10 @@ def create(name):
     # See if file already exists
     if fileExists(name):
         print("Error: duplicate file name")
+        return
+
+    if fdCount > 192:
+        print("Error: too many files")
         return
 
     # Search for free file descriptor
@@ -109,9 +116,11 @@ def create(name):
                 break
 
     D[1][0] += 8 # fd[0] (directory file) size is now 8 more bytes
+    fdCount += 1
     print("Success: file",name, "created")
 
 def delete(name):
+    global fdCount
 
     fdBlock, fdIndex,dir, i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
@@ -131,6 +140,7 @@ def delete(name):
     for space in range(i,i+8): # Mark the directory entry as free by setting the name field to '0'
         D[dir][space] = '0'
 
+    fdCount -= 1
     print("Success: file",name,"destroyed")
 
 def open(name):
@@ -252,7 +262,40 @@ def seek(i,p):
     OFT[i]["POSITION"] = p
     print("Success: current position is",p)
 
-    
+def directory():
+    dirList = list((x for x in D[1][1:4] if type(x) == int))
+    for dir in dirList:  # Get list of blocks directory has
+        for i in range(0, 505, 8):
+            if D[dir][i] != '0':
+                strList = D[dir][i:i+4]
+                name = "";
+                for ch in strList:
+                    if ch != '/':
+                        name += ch
+
+                #Getting file size
+                fdIndex = D[dir][i+4]
+                fdBlock = fdIndex // 508 + 1
+                fsize = D[fdBlock][fdIndex%512]
+
+                print(name,fsize)
+
+def read_memory(m,n):
+    mList = M[m:m+n]
+    sent = ""
+    for ch in mList:
+        if ch == '':
+            sent += ' '
+        else:
+            sent += ch
+    print(sent)
+
+def write_memory(m,s):
+    i = 0
+    for ch in s:
+        M[m+i] = ch
+        i+=1
+
 # HELPER FUNCTIONS
 def findFreeFD():
     for i in range(1,7):
@@ -319,10 +362,14 @@ if __name__ == "__main__":
     read(0,0,3)
     print("M:",M)
     write(1,0,3)
-    seek(1, 2)
     printOFT()
     printD()
-
+    directory()
+    read_memory(0,10)
+    write_memory(4,"Hello")
+    read_memory(0,10)
+    write(1,0,10)
+    printD()
 
 
 
