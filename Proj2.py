@@ -56,28 +56,28 @@ def init():
     for i in range(0,512):
         M.append('')
 
-    print("System Initialized")
+    print("system initialized")
 
 def create(name):
     global fdCount
 
     if len(name) > 3:
-        print("Error")
+        print("error")
         return
 
     # See if file already exists
     if fileExists(name):
-        print("Error")
+        print("error")
         return
 
     if fdCount > 192:
-        print("Error")
+        print("error")
         return
 
     # Search for free file descriptor
     fdBlock, fdIndex = findFreeFD()
     if fdBlock == -1 and fdIndex == -1:
-        print("Error")
+        print("error")
         return
 
     # If size of file is 512 or 1024, need to create a new block
@@ -85,7 +85,7 @@ def create(name):
         newBIndex = getNewBlock()
         if newBIndex != -1:
             if assignNewBlock(1,0,newBIndex) == False:
-                print("Error")
+                print("error")
                 return
             for i in range(len(D[newBIndex])):
                 D[newBIndex][i] = '0'
@@ -97,7 +97,7 @@ def create(name):
     for dir in dirList: # Get list of blocks directory has
         for i in range(0,505,8): # Need to change this later to start on the position in OFT
             if D[dir][i] != '0' and i == 504 and len(dirList) == 3 and dir == dirList[-1]: #If last 8 bytes of 3rd block
-                print("Error")
+                print("error")
                 return
 
             if D[dir][i] == '0': # Space in directory
@@ -124,7 +124,7 @@ def delete(name):
 
     fdBlock, fdIndex,dir, i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
-        print("Error")
+        print("error")
         return
     fdIndex = fdIndex%512
 
@@ -147,7 +147,7 @@ def myOpen(name):
 
     fdBlock, fdIndex,dir,i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
-        print("Error")
+        print("error")
         return
 
     for OFTIndex in range(0,4):
@@ -169,7 +169,7 @@ def myOpen(name):
             print(name,"opened",OFTIndex)
             return
 
-    print("Error")
+    print("error")
 
 def myClose(i):
     i *= 4
@@ -192,6 +192,7 @@ def myClose(i):
 
             print(i//4 ,"closed")
             return
+    print("error")
 
 def read(i,m,n):
 
@@ -268,7 +269,7 @@ def seek(i,p):
         return
 
     if p > OFT[i]["FSIZE"]:
-        print("Error")
+        print("error")
         return
 
     blocketh = p//512
@@ -397,7 +398,7 @@ if __name__ == "__main__":
                     myOpen(cmd[1])
                 elif cmd[0] == "cl":
                     if cmd[1].isdigit() == False:
-                        print("Error")
+                        print("error")
                         continue
                     myClose(int(cmd[1]))
                 elif cmd[0] == "rd":
