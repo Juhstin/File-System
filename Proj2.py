@@ -67,17 +67,17 @@ def create(name):
 
     # See if file already exists
     if fileExists(name):
-        print("Error: duplicate file name")
+        print("Error")
         return
 
     if fdCount > 192:
-        print("Error: too many files")
+        print("Error")
         return
 
     # Search for free file descriptor
     fdBlock, fdIndex = findFreeFD()
     if fdBlock == -1 and fdIndex == -1:
-        print("Error: too many files")
+        print("Error")
         return
 
     # If size of file is 512 or 1024, need to create a new block
@@ -85,7 +85,7 @@ def create(name):
         newBIndex = getNewBlock()
         if newBIndex != -1:
             if assignNewBlock(1,0,newBIndex) == False:
-                print("Error: file out of space")
+                print("Error")
                 return
             for i in range(len(D[newBIndex])):
                 D[newBIndex][i] = '0'
@@ -97,7 +97,7 @@ def create(name):
     for dir in dirList: # Get list of blocks directory has
         for i in range(0,505,8): # Need to change this later to start on the position in OFT
             if D[dir][i] != '0' and i == 504 and len(dirList) == 3 and dir == dirList[-1]: #If last 8 bytes of 3rd block
-                print("Error: no free directory entry found")
+                print("Error")
                 return
 
             if D[dir][i] == '0': # Space in directory
@@ -124,7 +124,7 @@ def delete(name):
 
     fdBlock, fdIndex,dir, i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
-        print("Error: file does not exist")
+        print("Error")
         return
     fdIndex = fdIndex%512
 
@@ -147,7 +147,7 @@ def myOpen(name):
 
     fdBlock, fdIndex,dir,i = findName(name)
     if fdBlock == -1 and fdIndex == -1:
-        print("Error: file does not exist")
+        print("Error")
         return
 
     for OFTIndex in range(0,4):
@@ -169,7 +169,7 @@ def myOpen(name):
             print(name,"opened",OFTIndex)
             return
 
-    print("Error: too many files open")
+    print("Error")
 
 def myClose(i):
     i *= 4
@@ -194,21 +194,36 @@ def myClose(i):
             return
 
 def read(i,m,n):
+
+    if OFT[i]["FDINDEX"] == -1:
+        print("error")
+        return
+
     RWPosition = OFT[i]["POSITION"]%512
     pos = RWPosition
 
+    emptyCt = 0;
     for c in range(0,n): # Until is reached
         if pos == 512 or pos == 1024:
             fdBlock = (OFT[i]["FINDEX"] // 512) + 1
             OFT[i]["RW"] = D[D[fdBlock][(OFT[i]["FINDEX"] % 512) + (OFT[i]["POSITION"] // 512) + 2]]
             pos = 0
-        M[m] = OFT[i]["RW"][pos]
+        if(OFT[i]["RW"][pos] == ''):
+            emptyCt += 1
+        else:
+            M[m] = OFT[i]["RW"][pos]
+        # M[m] = OFT[i]["RW"][pos]
         m += 1
         pos += 1
     OFT[i]["POSITION"] += n
-    print(n,"bytes read from",i)
+    print(n-emptyCt,"bytes read from",i)
 
 def write(i,m,n):
+
+    if OFT[i]["FDINDEX"] == -1:
+        print("error")
+        return
+
     #The function write(i, m, n) copies n bytes from memory M starting at location m to the open file i, starting at the current position.
     RWPosition = OFT[i]["POSITION"]%512
     pos = RWPosition
@@ -247,8 +262,13 @@ def write(i,m,n):
     print(n,"bytes written to",i)
 
 def seek(i,p):
+
+    if OFT[i]["FDINDEX"] == -1:
+        print("error")
+        return
+
     if p > OFT[i]["FSIZE"]:
-        print("Error: current position is past the end of file")
+        print("Error")
         return
 
     blocketh = p//512
@@ -306,9 +326,13 @@ def findFreeFD():
 
 def fileExists(name):
     # Seek D[7] to 0
+    fName = ""
     for i in range(0,505, 8):
-        fName = ""
-        fName = fName.join(D[7][i:i+4])
+        temp = ""
+        temp = temp.join(D[7][i:i+4])
+        for e in temp:
+            if e != '0' and e != '/':
+                fName += e
         if fName == name:
             return True
     return False
@@ -388,7 +412,11 @@ if __name__ == "__main__":
                 elif cmd[0] == "rm":
                     read_memory(int(cmd[1]),int(cmd[2]))
                 elif cmd[0] == "wm":
-                    write_memory(int(cmd[1]),cmd[2])
+                    inp = ""
+                    for i in range(2,len(cmd)):
+                        inp += cmd[i]
+                        if i != len(cmd)-1:
+                            inp += " "
+                    write_memory(int(cmd[1]),inp)
             else:
                 print()
-
